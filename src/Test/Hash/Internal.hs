@@ -388,8 +388,13 @@ hexbytes = go <?> "hexbytes"
         -- h <- takeWhile1 (inClass "0123456789abcdefABCDEF")
         -- h <- Data.Attoparsec.Text.Lazy.takeWhile (inClass "0-9a-fA-F")
         case B16.decode (T.encodeUtf8 h) of
+#if MIN_VERSION_base16_bytestring(1,0,0)
             Left e -> fail $ "failed to decode hex-encoded bytes: " <> e
             Right r -> return r
+#else
+            (r,"") -> return r
+            (r,e) -> fail "failed to decode hex-encoded bytes because of invalid input characters"
+#endif
 
 parseFile :: String -> Parser a -> FilePath -> IO a
 parseFile label p fp = parseOnly p <$> TL.readFile fp >>= \case
