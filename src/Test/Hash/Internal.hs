@@ -92,6 +92,22 @@ import System.FilePath
 import System.IO.Unsafe
 
 -- -------------------------------------------------------------------------- --
+-- Backward compatibility for template-haskell-2.16.0
+
+#if MIN_VERSION_template_haskell(2,17,0)
+code :: m (TExp a) -> Code m a
+code = Code
+#else
+type Code a b = a (TExp b)
+
+code :: a -> a
+code = id
+
+bindCode :: Q a -> (a -> Q (TExp a)) -> Code Q a
+bindCode act l = act >>= l
+#endif
+
+-- -------------------------------------------------------------------------- --
 -- Msg File
 
 data MsgFile = MsgFile
@@ -438,14 +454,6 @@ readRspDir fp = do
 -- Orphan Lift instances
 --
 -- Requires template-haskell >=2.16
-
-#if MIN_VERSION_template_haskell(2,17,0)
-code :: m (TExp a) -> Code m a
-code = Code
-#else
-code :: a -> a
-code = id
-#endif
 
 instance Lift B.ByteString where
     lift bs = return
