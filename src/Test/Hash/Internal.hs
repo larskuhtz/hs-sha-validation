@@ -455,6 +455,7 @@ readRspDir fp = do
 --
 -- Requires template-haskell >=2.16
 
+#if ! MIN_VERSION_bytestring(0,11,2)
 instance Lift B.ByteString where
     lift bs = return
         $ AppE (VarE 'unsafePerformIO)
@@ -468,6 +469,7 @@ instance Lift B.ByteString where
         B.PS ptr off sz = bs
 
     liftTyped = code . unsafeTExpCoerce . lift
+#endif
 
 instance (Lift a) => Lift (V.Vector a) where
     lift v = [| V.fromListN n' v' |]

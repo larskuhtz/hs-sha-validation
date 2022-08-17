@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['8.10.7', '9.0', '9.2']
+        cabal: ['3.6']
+        os: ['ubuntu-20.04', 'ubuntu-22.04']
+
+    steps:
+
+    # Setup
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Install GHC and Cabal
+      uses: haskell/actions/setup@v2
+      with:
+         ghc-version: ${{ matrix.ghc }}
+         cabal-version: ${{ matrix.cabal }}
+
+    - uses: actions/cache@v3
+      name: Cache dist-newstyle
+      with:
+        path: |
+          ~/.cabal/packages
+          ~/.cabal/store
+          dist-newstyle
+        key: ${{ matrix.os }}-${{ matrix.ghc }}-0-cabal
+
+    - name: Update package database
+      run: cabal update
+    - name: Configure build
+      run: |
+        cabal build all --dry-run
+        cabal freeze
+    - name: Install build dependencies
+      run: cabal build --only-dependencies
+    - name: Build library
+      run: cabal build
+
