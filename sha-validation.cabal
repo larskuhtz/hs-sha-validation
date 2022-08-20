@@ -12,6 +12,7 @@ maintainer: lakuhtz@gmail.com
 copyright: Copyright (c) 2022 Lars Kuhtz <lakuhtz@gmail.com>
 category: Data
 tested-with:
+    GHC==9.2.0
     GHC==9.0.1
     GHC==8.10.7
 extra-source-files:
