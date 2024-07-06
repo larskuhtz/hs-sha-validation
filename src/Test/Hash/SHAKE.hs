@@ -3,9 +3,9 @@
 
 -- |
 -- Module: Test.Hash.SHAKE
--- Copyright: Copyright © 2022 Kadena LLC.
+-- Copyright: Copyright © 2022-2024 Lars Kuhtz <lakuhtz@gmail.com>
 -- License: MIT
--- Maintainer: Lars Kuhtz <lars@kadena.io>
+-- Maintainer: Lars Kuhtz <lakuhtz@gmail.com>
 -- Stability: experimental
 -- Description: SHA-3 XOF Test Vectors for Byte-Oriented Output
 --

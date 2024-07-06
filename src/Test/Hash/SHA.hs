@@ -4,9 +4,9 @@
 
 -- |
 -- Module: Test.Hash.SHA
--- Copyright: Copyright © 2022-2024 Kadena LLC.
+-- Copyright: Copyright © 2022-2024 Lars Kuhtz <lakuhtz@gmail.com>
 -- License: MIT
--- Maintainer: Lars Kuhtz <lars@kadena.io>
+-- Maintainer: Lars Kuhtz <lakuhtz@gmail.com>
 -- Stability: experimental
 -- Description: SHA Test Vectors for Hashing Byte-Oriented Messages
 --
