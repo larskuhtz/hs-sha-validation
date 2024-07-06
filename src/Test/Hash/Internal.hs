@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -12,7 +13,7 @@
 
 -- |
 -- Module: Test.Hash.Internal
--- Copyright: Copyright © 2022 Kadena LLC.
+-- Copyright: Copyright © 2022-2024 Kadena LLC.
 -- License: MIT
 -- Maintainer: Lars Kuhtz <lars@kadena.io>
 -- Stability: experimental
@@ -55,8 +56,8 @@ module Test.Hash.Internal
 -- * Test Tools
 , msgTest
 , msgAssert
-, monteTest
-, monteAssert
+, monteTestInternal
+, monteAssertInternal
 
 -- * Internal: Embedding Response Files in Haskell Code
 , embedIO
@@ -67,20 +68,20 @@ import Control.Applicative
 import Control.Monad
 
 import Data.Attoparsec.Text.Lazy
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Internal as B (ByteString(..))
-import qualified Data.ByteString.Unsafe as B
+import Data.ByteString qualified as B
+import Data.ByteString.Base16 qualified as B16
+import Data.ByteString.Char8 qualified as B8
+import Data.ByteString.Internal qualified as B (ByteString(..))
+import Data.ByteString.Unsafe qualified as B
 import Data.Foldable
 import Data.Functor
-import qualified Data.List as L
+import Data.List qualified as L
 import Data.Maybe
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.IO as TL
-import qualified Data.Vector as V
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.IO qualified as TL
+import Data.Vector qualified as V
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
@@ -515,30 +516,11 @@ msgAssert assert hash f = forM_ vs $ \(i, v) ->
         $ B.take (fromIntegral (_msgLen v) `quot` 8)
         $ _msgMsg v
 
--- | Check that all test vectors in a Monte Carlo File are satisfied by a given hash
--- implementation.
---
-monteTest :: (B.ByteString -> B.ByteString) -> MonteFile -> Bool
-monteTest hash f = go (_monteSeed f) (toList $ _monteVectors f)
-  where
-    go :: B.ByteString -> [MonteVector] -> Bool
-    go _ [] = True
-    go s ((_monteMd -> h) : t) = hashI 1000 s == h && go h t
-
-    -- Each Round consists of 1000 hash applications
-    hashI :: Natural -> B.ByteString -> B.ByteString
-    hashI 0 s = s
-    hashI i s = let s' = hash s in hashI (i - 1) s'
-
--- | For a given hash implementation, assert the correct result for each test
--- vector in a 'MonteFile'.
---
--- The function to assert equality is usually provided by some testing
--- framework.
---
-monteAssert
+monteAssertInternal
     :: Monad m
-    => (String -> B.ByteString -> B.ByteString -> m ())
+    => Natural
+        -- ^ seed multiplyer
+    -> (String -> B.ByteString -> B.ByteString -> m ())
         -- ^ Function to assertion Equality. The first argument is a test label,
         -- the second argument is the actual value, and the thrid value is the
         -- expected value.
@@ -546,19 +528,33 @@ monteAssert
         -- ^ Hash function
     -> MonteFile
     -> m ()
-monteAssert assert hash f = go (_monteSeed f) (toList $ _monteVectors f)
+monteAssertInternal seedMultiplyer assert hash f = go (_monteSeed f) (toList $ _monteVectors f)
   where
+    size = fromIntegral (_monteL f)
+    multiplySeed = mconcat . replicate (fromIntegral seedMultiplyer)
+
     go _ [] = return ()
     go s (v : t) = do
-        let r = hashI 1000 s
+        let r = hashI 1000 (multiplySeed s)
         let md = _monteMd v
         assert (mkTestLabel (_monteCount v) md) md r
         when (r == md) $ go md t
 
     -- Each Round consists of 1000 hash applications
     hashI :: Natural -> B.ByteString -> B.ByteString
-    hashI 0 s = s
-    hashI i s = let s' = hash s in hashI (i - 1) s'
+    hashI 0 s = B.takeEnd size s
+    hashI i s = let s' = hash s in hashI (i - 1) (B.drop size s <> s')
+
+monteTestInternal
+    :: Natural
+    -> (B.ByteString -> B.ByteString)
+    -> MonteFile
+    -> Bool
+monteTestInternal i h f = case monteAssertInternal i check h f of
+    Nothing -> False
+    Just () -> True
+  where
+    check _ a b = guard (a == b)
 
 mkTestLabel :: Natural -> B.ByteString -> String
 mkTestLabel i input = show i <> "[" <> B8.unpack msg <> "]"

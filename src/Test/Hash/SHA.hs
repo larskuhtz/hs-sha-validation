@@ -1,9 +1,10 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
 -- Module: Test.Hash.SHA
--- Copyright: Copyright © 2022 Kadena LLC.
+-- Copyright: Copyright © 2022-2024 Kadena LLC.
 -- License: MIT
 -- Maintainer: Lars Kuhtz <lars@kadena.io>
 -- Stability: experimental
@@ -13,7 +14,7 @@
 --
 -- Details can be found here:
 --
--- https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/sha3/sha3vs.pdf
+-- https://csrc.nist.gov/csrc/media/projects/cryptographic-algorithm-validation-program/documents/shs/shavs.pdf.
 --
 -- Response files are available here:
 --
@@ -51,11 +52,66 @@ module Test.Hash.SHA
 , sha512Monte
 , sha512_224Monte
 , sha512_256Monte
+
+-- * Test Utils
+, msgTest
+, msgAssert
+, monteTest
+, monteAssert
 ) where
+
+import Data.ByteString qualified as B
 
 -- internal modules
 
 import Test.Hash.Internal
+
+-- -------------------------------------------------------------------------- --
+-- Tools
+
+-- | Test a given SHA1 or SHA2 implementation for the test vectors in a monte
+-- file. See 'monteAssert' for details.
+--
+monteTest :: (B.ByteString -> B.ByteString) -> MonteFile -> Bool
+monteTest = monteTestInternal 3
+
+-- | For a given SHA1 or SHA2 implementation, assert the correct result for each
+-- test vector in a 'MonteFile'.
+--
+-- The function to assert equality is usually provided by some testing
+-- framework.
+--
+-- NOTE that the test algorithms for SHA (SHA1 and SHA2) and SHA3 are different.
+--
+-- The test algorithm is describe in cf. https://csrc.nist.gov/csrc/media/projects/cryptographic-algorithm-validation-program/documents/shs/shavs.pdf.
+-- The pseudo code is as follows:
+--
+-- @
+-- INPUT: Seed - A random seed n bits long
+-- {
+--     for (j=0; j<100; j++) {
+--         MD0 = MD1 = MD2 = Seed;
+--         for (i=3; i<1003; i++) {
+--             Mi = MDi-3 || MDi-2 || MDi-1;
+--             MDi = SHA(Mi);
+--         }
+--         MDj = Seed = MD1002;
+--         OUTPUT: MDj
+--     }
+-- }
+-- @
+--
+monteAssert
+    :: Monad m
+    => (String -> B.ByteString -> B.ByteString -> m ())
+        -- ^ Function to assertion Equality. The first argument is a test label,
+        -- the second argument is the actual value, and the thrid value is the
+        -- expected value.
+    -> (B.ByteString -> B.ByteString)
+        -- ^ Hash function
+    -> MonteFile
+    -> m ()
+monteAssert = monteAssertInternal 3
 
 -- -------------------------------------------------------------------------- --
 --
