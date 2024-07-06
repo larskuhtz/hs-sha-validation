@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name: sha-validation
-version: 0.1.0.0
+version: 0.1.0.1
 synopsis: Validation SHA Implementations
 Description: NIST Secure Hash Algorithm Validation Tests
 homepage: https://github.com/larskuhtz/hs-sha-validation
